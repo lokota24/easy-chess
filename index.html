@@ -583,3 +583,1091 @@
     </script>
 </body>
 </html>
+
+    <script>
+        // Global variables
+        let currentPuzzle = 0;
+        let puzzleTimer = 30;
+        let puzzleScore = 0;
+        let quizScore = 0;
+        let currentQuestion = 0;
+        let gameMove = 0;
+
+        // Quiz questions
+        const quizQuestions = [
+            {
+                question: "Která figurka se může pohybovat pouze diagonálně?",
+                options: ["♜ Věž", "♝ Střelec", "♞ Jezdec", "♟ Pěšec"],
+                correct: 1
+            },
+            {
+                question: "Kolik polí může pěšec postoupit při prvním tahu?",
+                options: ["1 pole", "2 pole", "1 nebo 2 pole", "3 pole"],
+                correct: 2
+            },
+            {
+                question: "Jak se jmenuje speciální tah krále a věže?",
+                options: ["Rošáda", "En passant", "Proměna", "Vidlička"],
+                correct: 0
+            },
+            {
+                question: "Kdy nastává pat?",
+                options: ["Při šachu", "Při matu", "Když hráč nemá legální tah, ale není v šachu", "Při remíze"],
+                correct: 2
+            },
+            {
+                question: "Kolik bodů má dáma podle klasického hodnocení?",
+                options: ["5 bodů", "8 bodů", "9 bodů", "10 bodů"],
+                correct: 2
+            }
+        ];
+
+        // Piece movements data
+        const pieceMovements = {
+            pawn: {
+                info: "Pěšec se pohybuje o jedno pole dopředu, bere diagonálně. Při prvním tahu může postoupit o dvě pole.",
+                moves: [[1,4], [2,4]] // example moves from position [0,4]
+            },
+            rook: {
+                info: "Věž se pohybuje horizontálně nebo vertikálně na libovolnou vzdálenost.",
+                moves: [[4,0], [4,1], [4,2], [4,3], [4,5], [4,6], [4,7], [0,4], [1,4], [2,4], [3,4], [5,4], [6,4], [7,4]]
+            },
+            knight: {
+                info: "Jezdec se pohybuje ve tvaru L - dva pole v jednom směru a jedno kolmo na něj.",
+                moves: [[2,3], [2,5], [3,2], [3,6], [5,2], [5,6], [6,3], [6,5]]
+            },
+            bishop: {
+                info: "Střelec se pohybuje diagonálně na libovolnou vzdálenost.",
+                moves: [[0,0], [1,1], [2,2], [3,3], [5,5], [6,6], [7,7], [7,1], [6,2], [5,3], [3,5], [2,6], [1,7]]
+            },
+            queen: {
+                info: "Dáma kombinuje pohyby věže a střelce - horizontálně, vertikálně i diagonálně.",
+                moves: [[4,0], [4,1], [4,2], [4,3], [4,5], [4,6], [4,7], [0,4], [1,4], [2,4], [3,4], [5,4], [6,4], [7,4], [0,0], [1,1], [2,2], [3,3], [5,5], [6,6], [7,7], [7,1], [6,2], [5,3], [3,5], [2,6], [1,7]]
+            },
+            king: {
+                info: "Král se pohybuje o jedno pole v libovolném směru.",
+                moves: [[3,3], [3,4], [3,5], [4,3], [4,5], [5,3], [5,4], [5,5]]
+            }
+        };
+
+        // Modal functions
+        function openModal(modalId) {
+            document.getElementById(modalId).classList.add('active');
+            
+            // Initialize content based on modal
+            if (modalId === 'rulesModal') {
+                initializeRulesBoard();
+            } else if (modalId === 'tacticsModal') {
+                initializeTacticsBoard();
+                startPuzzleTimer();
+            } else if (modalId === 'trainingModal') {
+                loadQuestion();
+            } else if (modalId === 'gamesModal') {
+                initializeGamesBoard();
+            }
+        }
+
+        function closeModal(modalId) {
+            document.getElementById(modalId).classList.<!DOCTYPE html>
+<html lang="cs">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Jonáš Chess Mastery</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary-gold: #D4AF37;
+            --dark-brown: #2C1810;
+            --light-cream: #F5F5DC;
+            --chess-black: #1a1a1a;
+            --chess-white: #f0f0f0;
+            --accent-red: #8B0000;
+        }
+
+        body {
+            font-family: 'Georgia', serif;
+            background: linear-gradient(135deg, var(--dark-brown) 0%, var(--chess-black) 100%);
+            color: var(--light-cream);
+            overflow-x: hidden;
+        }
+
+        .navbar {
+            position: fixed;
+            top: 0;
+            width: 100%;
+            background: rgba(28, 24, 16, 0.95);
+            backdrop-filter: blur(10px);
+            z-index: 1000;
+            padding: 1rem 2rem;
+            transition: all 0.3s ease;
+        }
+
+        .nav-container {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .logo {
+            font-size: 1.8rem;
+            font-weight: bold;
+            color: var(--primary-gold);
+            text-decoration: none;
+        }
+
+        .nav-links {
+            display: flex;
+            list-style: none;
+            gap: 2rem;
+        }
+
+        .nav-links a {
+            color: var(--light-cream);
+            text-decoration: none;
+            transition: color 0.3s ease;
+            position: relative;
+        }
+
+        .nav-links a:hover {
+            color: var(--primary-gold);
+        }
+
+        .nav-links a::after {
+            content: '';
+            position: absolute;
+            bottom: -5px;
+            left: 0;
+            width: 0;
+            height: 2px;
+            background: var(--primary-gold);
+            transition: width 0.3s ease;
+        }
+
+        .nav-links a:hover::after {
+            width: 100%;
+        }
+
+        .hero {
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            background: 
+                radial-gradient(circle at 20% 80%, rgba(212, 175, 55, 0.1) 0%, transparent 50%),
+                radial-gradient(circle at 80% 20%, rgba(139, 0, 0, 0.1) 0%, transparent 50%);
+        }
+
+        .chess-pattern {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            opacity: 0.05;
+            background-image: 
+                repeating-conic-gradient(
+                    from 0deg at 50% 50%,
+                    var(--chess-white) 0deg 90deg,
+                    var(--chess-black) 90deg 180deg
+                );
+            background-size: 80px 80px;
+            animation: float 20s ease-in-out infinite;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0px) rotate(0deg); }
+            50% { transform: translateY(-10px) rotate(1deg); }
+        }
+
+        .hero-content {
+            text-align: center;
+            z-index: 2;
+            max-width: 800px;
+            padding: 2rem;
+        }
+
+        .hero-title {
+            font-size: 4.5rem;
+            font-weight: bold;
+            color: var(--primary-gold);
+            text-shadow: 3px 3px 6px rgba(0,0,0,0.5);
+            margin-bottom: 1rem;
+            animation: glow 2s ease-in-out infinite alternate;
+        }
+
+        @keyframes glow {
+            from { text-shadow: 3px 3px 6px rgba(0,0,0,0.5), 0 0 20px rgba(212, 175, 55, 0.3); }
+            to { text-shadow: 3px 3px 6px rgba(0,0,0,0.5), 0 0 30px rgba(212, 175, 55, 0.6); }
+        }
+
+        .hero-subtitle {
+            font-size: 1.3rem;
+            color: var(--light-cream);
+            margin-bottom: 2rem;
+            line-height: 1.6;
+            opacity: 0.9;
+        }
+
+        .chess-piece {
+            position: absolute;
+            font-size: 8rem;
+            opacity: 0.1;
+            animation: rotate 15s linear infinite;
+        }
+
+        .chess-piece.king {
+            top: 10%;
+            right: 15%;
+            animation-delay: -2s;
+        }
+
+        .chess-piece.queen {
+            bottom: 15%;
+            left: 10%;
+            animation-delay: -8s;
+        }
+
+        .chess-piece.knight {
+            top: 20%;
+            left: 20%;
+            animation-delay: -12s;
+        }
+
+        @keyframes rotate {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        .cta-buttons {
+            display: flex;
+            gap: 1.5rem;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            padding: 1rem 2rem;
+            border: none;
+            border-radius: 8px;
+            font-size: 1.1rem;
+            font-weight: bold;
+            text-decoration: none;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .btn-primary {
+            background: linear-gradient(45deg, var(--primary-gold), #FFD700);
+            color: var(--dark-brown);
+        }
+
+        .btn-secondary {
+            background: transparent;
+            color: var(--light-cream);
+            border: 2px solid var(--primary-gold);
+        }
+
+        .btn-tertiary {
+            background: linear-gradient(45deg, var(--accent-red), #B22222);
+            color: var(--light-cream);
+        }
+
+        .btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+            transition: left 0.5s;
+        }
+
+        .btn:hover::before {
+            left: 100%;
+        }
+
+        .btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.3);
+        }
+
+        .btn-primary:hover {
+            background: linear-gradient(45deg, #FFD700, #FFA500);
+        }
+
+        .btn-secondary:hover {
+            background: var(--primary-gold);
+            color: var(--dark-brown);
+        }
+
+        .btn-tertiary:hover {
+            background: linear-gradient(45deg, #B22222, #DC143C);
+        }
+
+        .features {
+            padding: 5rem 2rem;
+            background: linear-gradient(180deg, transparent 0%, rgba(212, 175, 55, 0.05) 100%);
+        }
+
+        .features-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 3rem;
+        }
+
+        .feature-card {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            padding: 2rem;
+            text-align: center;
+            transition: all 0.3s ease;
+            border: 1px solid rgba(212, 175, 55, 0.2);
+        }
+
+        .feature-card:hover {
+            transform: translateY(-10px);
+            background: rgba(255, 255, 255, 0.1);
+            border-color: var(--primary-gold);
+        }
+
+        .feature-icon {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+            color: var(--primary-gold);
+        }
+
+        .feature-title {
+            font-size: 1.5rem;
+            font-weight: bold;
+            margin-bottom: 1rem;
+            color: var(--primary-gold);
+        }
+
+        .feature-description {
+            line-height: 1.6;
+            opacity: 0.9;
+        }
+
+        .stats {
+            padding: 3rem 2rem;
+            background: rgba(0, 0, 0, 0.3);
+            text-align: center;
+        }
+
+        .stats-container {
+            max-width: 800px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 2rem;
+        }
+
+        .stat-item {
+            padding: 1rem;
+        }
+
+        .stat-number {
+            font-size: 2.5rem;
+            font-weight: bold;
+            color: var(--primary-gold);
+            display: block;
+        }
+
+        .stat-label {
+            font-size: 1rem;
+            opacity: 0.8;
+            margin-top: 0.5rem;
+        }
+
+        .mobile-menu {
+            display: none;
+            flex-direction: column;
+            cursor: pointer;
+        }
+
+        .mobile-menu span {
+            width: 25px;
+            height: 3px;
+            background: var(--light-cream);
+            margin: 3px 0;
+            transition: 0.3s;
+        }
+
+        @media (max-width: 768px) {
+            .nav-links {
+                display: none;
+            }
+            
+            .mobile-menu {
+                display: flex;
+            }
+            
+            .hero-title {
+                font-size: 3rem;
+            }
+            
+            .hero-subtitle {
+                font-size: 1.1rem;
+            }
+            
+            .cta-buttons {
+                flex-direction: column;
+                align-items: center;
+            }
+            
+            .chess-piece {
+                font-size: 4rem;
+                opacity: 0.05;
+            }
+        }
+
+        .scroll-indicator {
+            position: absolute;
+            bottom: 2rem;
+            left: 50%;
+            transform: translateX(-50%);
+            color: var(--primary-gold);
+            font-size: 2rem;
+            animation: bounce 2s infinite;
+        }
+
+        @keyframes bounce {
+            0%, 20%, 50%, 80%, 100% { transform: translateX(-50%) translateY(0); }
+            40% { transform: translateX(-50%) translateY(-10px); }
+            60% { transform: translateX(-50%) translateY(-5px); }
+        }
+
+        /* Modal Styles */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 2000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(5px);
+        }
+
+        .modal.active {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            animation: fadeIn 0.3s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        .modal-content {
+            background: linear-gradient(135deg, var(--dark-brown), var(--chess-black));
+            margin: 2rem;
+            padding: 2rem;
+            border-radius: 15px;
+            max-width: 90vw;
+            max-height: 85vh;
+            overflow-y: auto;
+            position: relative;
+            border: 2px solid var(--primary-gold);
+            box-shadow: 0 0 30px rgba(212, 175, 55, 0.3);
+            animation: slideIn 0.3s ease;
+        }
+
+        @keyframes slideIn {
+            from { transform: scale(0.7) translateY(-50px); opacity: 0; }
+            to { transform: scale(1) translateY(0); opacity: 1; }
+        }
+
+        .close {
+            color: var(--primary-gold);
+            float: right;
+            font-size: 2rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: color 0.3s;
+        }
+
+        .close:hover {
+            color: #FFD700;
+        }
+
+        .modal-title {
+            color: var(--primary-gold);
+            font-size: 2rem;
+            margin-bottom: 1.5rem;
+            text-align: center;
+        }
+
+        /* Chessboard Styles */
+        .chessboard {
+            display: grid;
+            grid-template-columns: repeat(8, 1fr);
+            grid-template-rows: repeat(8, 1fr);
+            width: 400px;
+            height: 400px;
+            margin: 2rem auto;
+            border: 3px solid var(--primary-gold);
+            border-radius: 10px;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+        }
+
+        .square {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+        .square.light {
+            background-color: #f0d9b5;
+            color: #8b4513;
+        }
+
+        .square.dark {
+            background-color: #b58863;
+            color: #f0d9b5;
+        }
+
+        .square:hover {
+            box-shadow: inset 0 0 20px rgba(212, 175, 55, 0.3);
+            transform: scale(1.05);
+        }
+
+        .square.highlight {
+            background-color: #ffeb3b !important;
+            animation: pulse 1s infinite;
+        }
+
+        @keyframes pulse {
+            0% { box-shadow: inset 0 0 20px rgba(255, 193, 7, 0.5); }
+            50% { box-shadow: inset 0 0 30px rgba(255, 193, 7, 0.8); }
+            100% { box-shadow: inset 0 0 20px rgba(255, 193, 7, 0.5); }
+        }
+
+        /* Interactive Elements */
+        .interactive-section {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 10px;
+            padding: 1.5rem;
+            margin: 1.5rem 0;
+            border: 1px solid rgba(212, 175, 55, 0.3);
+        }
+
+        .piece-selector {
+            display: flex;
+            justify-content: center;
+            gap: 1rem;
+            margin: 1rem 0;
+            flex-wrap: wrap;
+        }
+
+        .piece-btn {
+            background: var(--primary-gold);
+            color: var(--dark-brown);
+            border: none;
+            padding: 0.8rem 1.2rem;
+            border-radius: 8px;
+            font-size: 1.2rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: bold;
+        }
+
+        .piece-btn:hover {
+            background: #FFD700;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+        }
+
+        .piece-btn.active {
+            background: var(--accent-red);
+            color: var(--light-cream);
+        }
+
+        .quiz-container {
+            text-align: center;
+        }
+
+        .quiz-question {
+            font-size: 1.3rem;
+            margin-bottom: 1.5rem;
+            color: var(--light-cream);
+        }
+
+        .quiz-options {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin: 1.5rem 0;
+        }
+
+        .quiz-option {
+            background: rgba(255, 255, 255, 0.1);
+            border: 2px solid var(--primary-gold);
+            color: var(--light-cream);
+            padding: 1rem;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .quiz-option:hover {
+            background: rgba(212, 175, 55, 0.2);
+            transform: translateY(-2px);
+        }
+
+        .quiz-option.correct {
+            background: rgba(76, 175, 80, 0.3);
+            border-color: #4CAF50;
+        }
+
+        .quiz-option.wrong {
+            background: rgba(244, 67, 54, 0.3);
+            border-color: #F44336;
+        }
+
+        .tactics-puzzle {
+            text-align: center;
+        }
+
+        .puzzle-info {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 1rem;
+            border-radius: 8px;
+            margin: 1rem 0;
+        }
+
+        .timer {
+            font-size: 1.5rem;
+            color: var(--primary-gold);
+            font-weight: bold;
+        }
+
+        .score {
+            color: var(--accent-red);
+            font-weight: bold;
+        }
+
+        @media (max-width: 768px) {
+            .chessboard {
+                width: 300px;
+                height: 300px;
+            }
+            
+            .square {
+                font-size: 1.5rem;
+            }
+            
+            .modal-content {
+                margin: 1rem;
+                padding: 1rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-container">
+            <a href="#" class="logo">♔ Jonáš Chess</a>
+            <ul class="nav-links">
+                <li><a href="#home">Domů</a></li>
+                <li><a href="#rules">Pravidla</a></li>
+                <li><a href="#strategies">Strategie</a></li>
+                <li><a href="#training">Trénink</a></li>
+                <li><a href="#games">Partie</a></li>
+                <li><a href="#blog">Blog</a></li>
+                <li><a href="#contact">Kontakt</a></li>
+            </ul>
+            <div class="mobile-menu">
+                <span></span>
+                <span></span>
+                <span></span>
+            </div>
+        </div>
+    </nav>
+
+    <section class="hero" id="home">
+        <div class="chess-pattern"></div>
+        <div class="chess-piece king">♔</div>
+        <div class="chess-piece queen">♕</div>
+        <div class="chess-piece knight">♘</div>
+        
+        <div class="hero-content">
+            <h1 class="hero-title">JONÁŠ</h1>
+            <p class="hero-subtitle">
+                Vítej na mé šachové stránce. Jmenuji se Jonáš a věnuji se šachu se srdcem, hlavou a vášní. 
+                Tady najdeš vše od základních pravidel až po hluboké analýzy a pokročilé strategie.
+            </p>
+            <div class="cta-buttons">
+                <a href="#training" class="btn btn-primary">Začít hrát</a>
+                <a href="#rules" class="btn btn-secondary">Naučit se šachy</a>
+                <a href="#strategies" class="btn btn-tertiary">Prozkoumat obsah</a>
+            </div>
+        </div>
+        
+        <div class="scroll-indicator">↓</div>
+    </section>
+
+    <section class="features">
+        <div class="features-container">
+            <div class="feature-card" onclick="openModal('rulesModal')">
+                <div class="feature-icon">♙</div>
+                <h3 class="feature-title">Pravidla pro začátečníky</h3>
+                <p class="feature-description">
+                    Kompletní průvodce všemi figurkami a pravidly. Od pěšce po krále - vše vysvětleno jednoduše a srozumitelně s vizuálními příklady.
+                </p>
+            </div>
+            
+            <div class="feature-card" onclick="openModal('tacticsModal')">
+                <div class="feature-icon">⚔️</div>
+                <h3 class="feature-title">Pokročilé strategie</h3>
+                <p class="feature-description">
+                    Taktiky jako vidlička, rentgen, šachová síť. Interaktivní diagramy a pozice s výzvou "Najdi nejlepší tah!".
+                </p>
+            </div>
+            
+            <div class="feature-card" onclick="openModal('gamesModal')">
+                <div class="feature-icon">🏆</div>
+                <h3 class="feature-title">Rozbory partií</h3>
+                <p class="feature-description">
+                    Slavné partie mistrů světa, analýzy klíčových tahů a vlastní partie z turnajů s detailními komentáři.
+                </p>
+            </div>
+            
+            <div class="feature-card" onclick="openModal('trainingModal')">
+                <div class="feature-icon">⏱️</div>
+                <h3 class="feature-title">Tréninkové centrum</h3>
+                <p class="feature-description">
+                    Časové testy, cíle pro zlepšení ELO ratingu, deník tréninku a kvízy pro všechny úrovně hráčů.
+                </p>
+            </div>
+            
+            <div class="feature-card" onclick="openModal('galleryModal')">
+                <div class="feature-icon">🎨</div>
+                <h3 class="feature-title">Galerie figurek</h3>
+                <p class="feature-description">
+                    Encyklopedie šachového designu - od klasických dřevěných až po moderní 3D figurky. Krása šachu ve vizuální podobě.
+                </p>
+            </div>
+            
+            <div class="feature-card" onclick="openModal('blogModal')">
+                <div class="feature-icon">📝</div>
+                <h3 class="feature-title">Blog & články</h3>
+                <p class="feature-description">
+                    Osobní články o šachových turnajích, nejčastějších chybách začátečníků a zkušenostech z šachového světa.
+                </p>
+            </div>
+        </div>
+    </section>
+
+    <section class="stats">
+        <div class="stats-container">
+            <div class="stat-item">
+                <span class="stat-number">100K+</span>
+                <span class="stat-label">Slov obsahu</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-number">50+</span>
+                <span class="stat-label">Taktických pozic</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-number">25+</span>
+                <span class="stat-label">Rozborů partií</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-number">∞</span>
+                <span class="stat-label">Vášeň pro šachy</span>
+            </div>
+        </div>
+    </section>
+
+    <!-- Modals -->
+    <!-- Rules Modal -->
+    <div id="rulesModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal('rulesModal')">&times;</span>
+            <h2 class="modal-title">♙ Pravidla šachu - Interaktivní průvodce</h2>
+            
+            <div class="interactive-section">
+                <h3>Poznej šachové figurky</h3>
+                <p>Klikni na figurku a uvidíš, jak se pohybuje na šachovnici:</p>
+                
+                <div class="piece-selector">
+                    <button class="piece-btn" onclick="showPieceMovement('pawn')">♟ Pěšec</button>
+                    <button class="piece-btn" onclick="showPieceMovement('rook')">♜ Věž</button>
+                    <button class="piece-btn" onclick="showPieceMovement('knight')">♞ Jezdec</button>
+                    <button class="piece-btn" onclick="showPieceMovement('bishop')">♝ Střelec</button>
+                    <button class="piece-btn" onclick="showPieceMovement('queen')">♛ Dáma</button>
+                    <button class="piece-btn" onclick="showPieceMovement('king')">♚ Král</button>
+                </div>
+                
+                <div class="chessboard" id="rulesBoard">
+                    <!-- Chessboard squares will be generated by JavaScript -->
+                </div>
+                
+                <div id="pieceInfo" style="text-align: center; margin-top: 1rem; color: var(--light-cream);">
+                    Vyber figurku a uvidíš, jak se pohybuje!
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tactics Modal -->
+    <div id="tacticsModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal('tacticsModal')">&times;</span>
+            <h2 class="modal-title">⚔️ Taktické puzzle</h2>
+            
+            <div class="tactics-puzzle">
+                <div class="puzzle-info">
+                    <div class="timer">Čas: <span id="puzzleTimer">30</span>s</div>
+                    <div class="score">Skóre: <span id="puzzleScore">0</span></div>
+                </div>
+                
+                <p style="color: var(--light-cream); margin: 1rem 0;">
+                    <strong>Výzva:</strong> Najdi mat v jednom tahu! Klikni na správné pole.
+                </p>
+                
+                <div class="chessboard" id="tacticsBoard">
+                    <!-- Puzzle board -->
+                </div>
+                
+                <div style="margin-top: 1rem;">
+                    <button class="btn btn-primary" onclick="newPuzzle()">Nové puzzle</button>
+                    <button class="btn btn-secondary" onclick="showHint()">Nápověda</button>
+                </div>
+                
+                <div id="puzzleResult" style="margin-top: 1rem; font-size: 1.2rem; font-weight: bold;"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Training Modal -->
+    <div id="trainingModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal('trainingModal')">&times;</span>
+            <h2 class="modal-title">⏱️ Šachový kvíz</h2>
+            
+            <div class="quiz-container">
+                <div class="quiz-question" id="quizQuestion">
+                    Která figurka se může pohybovat pouze diagonálně?
+                </div>
+                
+                <div class="quiz-options" id="quizOptions">
+                    <div class="quiz-option" onclick="selectAnswer(this, false)">♜ Věž</div>
+                    <div class="quiz-option" onclick="selectAnswer(this, true)">♝ Střelec</div>
+                    <div class="quiz-option" onclick="selectAnswer(this, false)">♞ Jezdec</div>
+                    <div class="quiz-option" onclick="selectAnswer(this, false)">♟ Pěšec</div>
+                </div>
+                
+                <div style="margin-top: 2rem;">
+                    <button class="btn btn-primary" onclick="nextQuestion()">Další otázka</button>
+                    <div style="margin-top: 1rem; color: var(--primary-gold);">
+                        Otázka <span id="questionNumber">1</span> z 10 | Skóre: <span id="quizScoreDisplay">0</span>/10
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Games Modal -->
+    <div id="gamesModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal('gamesModal')">&times;</span>
+            <h2 class="modal-title">🏆 Slavné šachové partie</h2>
+            
+            <div class="interactive-section">
+                <h3>Bobby Fischer vs Boris Spassky (1972)</h3>
+                <p style="color: var(--light-cream); line-height: 1.6;">
+                    Jedna z nejslavnějších partií v dějinách šachu. Fischer hrál brilantní kombinaci, 
+                    která ho dovedla k titulu mistra světa.
+                </p>
+                
+                <div class="chessboard" id="gamesBoard">
+                    <!-- Famous game position -->
+                </div>
+                
+                <div style="margin-top: 1rem; text-align: center;">
+                    <button class="btn btn-primary" onclick="showGameMove('prev')">← Předchozí tah</button>
+                    <button class="btn btn-secondary" onclick="showGameMove('next')">Další tah →</button>
+                </div>
+                
+                <div style="margin-top: 1rem; color: var(--light-cream);">
+                    <strong>Komentář:</strong> <span id="gameComment">Pozice před rozhodujícím tahem...</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Gallery Modal -->
+    <div id="galleryModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal('galleryModal')">&times;</span>
+            <h2 class="modal-title">🎨 Galerie šachových sad</h2>
+            
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 2rem; margin-top: 2rem;">
+                <div class="interactive-section">
+                    <h3>Klasická dřevěná sada</h3>
+                    <div style="font-size: 4rem; text-align: center; margin: 1rem 0;">♔ ♕ ♖ ♗ ♘ ♙</div>
+                    <p style="color: var(--light-cream);">Tradiční Staunton design z roku 1849, stále standard pro turnaje.</p>
+                </div>
+                
+                <div class="interactive-section">
+                    <h3>Moderní minimalistická</h3>
+                    <div style="font-size: 4rem; text-align: center; margin: 1rem 0;">🔶 🔷 🔸 🔹 ⬜ ⬛</div>
+                    <p style="color: var(--light-cream);">Čisté linie a geometrické tvary pro moderní hráče.</p>
+                </div>
+                
+                <div class="interactive-section">
+                    <h3>Skleněná luxusní sada</h3>
+                    <div style="font-size: 4rem; text-align: center; margin: 1rem 0;">💎 ✨ 🔮 ⭐ 💠 🌟</div>
+                    <p style="color: var(--light-cream);">Křišťálově čisté figurky s elegantním svícením.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Blog Modal -->
+    <div id="blogModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal('blogModal')">&times;</span>
+            <h2 class="modal-title">📝 Jonášův šachový blog</h2>
+            
+            <div class="interactive-section">
+                <h3>Můj první turnaj - Co jsem se naučil</h3>
+                <p style="color: var(--primary-gold); margin-bottom: 1rem;">Publikováno: 15. května 2025</p>
+                <p style="color: var(--light-cream); line-height: 1.8;">
+                    Nedávno jsem se zúčastnil svého prvního šachového turnaje a byla to neuvěřitelná zkušenost! 
+                    Chtěl bych se podělit o pár pozorování a lekcí, které mi tato událost přinesla...
+                </p>
+                <p style="color: var(--light-cream); line-height: 1.8; margin-top: 1rem;">
+                    <strong>Nejdůležitější lekce:</strong><br>
+                    1. Časový management je klíčový<br>
+                    2. Psychická příprava je stejně důležitá jako technická<br>
+                    3. Každá prohra je příležitost k učení<br>
+                    4. Komunita šachistů je neuvěřitelně přátelská
+                </p>
+            </div>
+            
+            <div class="interactive-section">
+                <h3>5 nejčastějších chyb začátečníků</h3>
+                <p style="color: var(--primary-gold); margin-bottom: 1rem;">Publikováno: 10. května 2025</p>
+                <p style="color: var(--light-cream); line-height: 1.8;">
+                    Po letech hraní jsem si všiml vzorců v chybách, které dělají začínající hráči. 
+                    Tady je můj seznam těch nejčastějších...
+                </p>
+                <ul style="color: var(--light-cream); margin-top: 1rem; padding-left: 2rem;">
+                    <li>Nerozvinování figur v zahájení</li>
+                    <li>Ignorování bezpečnosti krále</li>
+                    <li>Honba za materiálem místo pozice</li>
+                    <li>Nedostatečné plánování</li>
+                    <li>Podcenění koncovky</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Smooth scrolling pro odkazy
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                const target = document.querySelector(this.getAttribute('href'));
+                if (target) {
+                    target.scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'start'
+                    });
+                }
+            });
+        });
+
+        // Navbar scroll effect
+        window.addEventListener('scroll', () => {
+            const navbar = document.querySelector('.navbar');
+            if (window.scrollY > 100) {
+                navbar.style.background = 'rgba(28, 24, 16, 0.98)';
+            } else {
+                navbar.style.background = 'rgba(28, 24, 16, 0.95)';
+            }
+        });
+
+        // Mobile menu toggle
+        const mobileMenu = document.querySelector('.mobile-menu');
+        const navLinks = document.querySelector('.nav-links');
+        
+        mobileMenu.addEventListener('click', () => {
+            navLinks.style.display = navLinks.style.display === 'flex' ? 'none' : 'flex';
+        });
+
+        // Animace čísel ve statistikách
+        const observerOptions = {
+            threshold: 0.7
+        };
+
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    const numbers = entry.target.querySelectorAll('.stat-number');
+                    numbers.forEach(number => {
+                        const target = parseInt(number.textContent);
+                        if (!isNaN(target)) {
+                            animateNumber(number, 0, target, 2000);
+                        }
+                    });
+                }
+            });
+        }, observerOptions);
+
+        observer.observe(document.querySelector('.stats'));
+
+        function animateNumber(element, start, end, duration) {
+            const range = end - start;
+            const increment = range / (duration / 16);
+            let current = start;
+            
+            const timer = setInterval(() => {
+                current += increment;
+                if (current >= end) {
+                    element.textContent = end + '+';
+                    clearInterval(timer);
+                } else {
+                    element.textContent = Math.floor(current) + '+';
+                }
+            }, 16);
+        }
+
+        // Parallax efekt pro šachové figurky
+        window.addEventListener('scroll', () => {
+            const scrolled = window.pageYOffset;
+            const pieces = document.querySelectorAll('.chess-piece');
+            
+            pieces.forEach((piece, index) => {
+                const speed = 0.5 + (index * 0.1);
+                piece.style.transform = `translateY(${scrolled * speed}px) rotate(${scrolled * 0.1}deg)`;
+            });
+        });
+    </script>
+</body>
+</html>
