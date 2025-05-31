@@ -1,0 +1,1229 @@
+
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Šachy pro začátečníky - Naučte se hrát!</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #fff;
+            overflow-x: hidden;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 40px;
+            position: relative;
+        }
+
+        h1 {
+            font-size: 3.5rem;
+            font-weight: 700;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+            animation: fadeInDown 1s ease-out;
+        }
+
+        .subtitle {
+            font-size: 1.2rem;
+            opacity: 0.9;
+            animation: fadeInUp 1s ease-out 0.3s both;
+        }
+
+        .game-container {
+            display: grid;
+            grid-template-columns: 1fr 600px 1fr;
+            gap: 30px;
+            align-items: start;
+        }
+
+        .left-panel, .right-panel {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 25px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            animation: slideInLeft 1s ease-out;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+        }
+
+        .right-panel {
+            animation: slideInRight 1s ease-out;
+        }
+
+        .board-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            animation: fadeIn 1s ease-out 0.5s both;
+        }
+
+        .chessboard {
+            width: 560px;
+            height: 560px;
+            border: 4px solid #8b5a3c;
+            border-radius: 12px;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.3);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .square {
+            width: 70px;
+            height: 70px;
+            display: inline-block;
+            position: relative;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0.0, 0.2, 1);
+        }
+
+        .square.light {
+            background: linear-gradient(45deg, #f0d9b5, #e8d1a8);
+        }
+
+        .square.dark {
+            background: linear-gradient(45deg, #b58863, #a67c52);
+        }
+
+        .square:hover {
+            transform: scale(1.05);
+            box-shadow: inset 0 0 20px rgba(255,255,255,0.3);
+            z-index: 10;
+        }
+
+        .square.selected {
+            background: radial-gradient(circle, #ffeb3b, #ffc107) !important;
+            animation: pulse 1s infinite;
+            transform: scale(1.08);
+            box-shadow: 0 0 25px rgba(255, 235, 59, 0.6);
+        }
+
+        .square.possible-move {
+            background: radial-gradient(circle, #4caf50, #388e3c) !important;
+            animation: glow 2s infinite alternate;
+        }
+
+        .square.last-move {
+            background: radial-gradient(circle, #ff9800, #f57000) !important;
+            animation: fadeGlow 1.5s ease-out;
+        }
+
+        .piece {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 45px;
+            transition: all 0.3s ease;
+            user-select: none;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .piece:hover {
+            transform: scale(1.1) rotate(5deg);
+            filter: brightness(1.2);
+        }
+
+        .piece.dragging {
+            opacity: 0.7;
+            transform: scale(1.2) rotate(10deg);
+            z-index: 1000;
+        }
+
+        .coordinates {
+            position: absolute;
+            font-size: 12px;
+            font-weight: bold;
+            color: #333;
+        }
+
+        .coord-file {
+            bottom: 2px;
+            right: 4px;
+        }
+
+        .coord-rank {
+            top: 2px;
+            left: 4px;
+        }
+
+        .game-controls {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-top: 20px;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 25px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .btn-primary {
+            background: linear-gradient(45deg, #4caf50, #45a049);
+            color: white;
+            box-shadow: 0 4px 15px rgba(76, 175, 80, 0.3);
+        }
+
+        .btn-secondary {
+            background: linear-gradient(45deg, #2196f3, #1976d2);
+            color: white;
+            box-shadow: 0 4px 15px rgba(33, 150, 243, 0.3);
+        }
+
+        .btn-danger {
+            background: linear-gradient(45deg, #f44336, #d32f2f);
+            color: white;
+            box-shadow: 0 4px 15px rgba(244, 67, 54, 0.3);
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.2);
+        }
+
+        .btn:active {
+            transform: translateY(0);
+        }
+
+        .info-panel h3 {
+            color: #ffeb3b;
+            margin-bottom: 15px;
+            font-size: 1.3rem;
+            border-bottom: 2px solid #ffeb3b;
+            padding-bottom: 8px;
+        }
+
+        .move-history {
+            max-height: 200px;
+            overflow-y: auto;
+            background: rgba(0,0,0,0.2);
+            border-radius: 10px;
+            padding: 15px;
+            margin-top: 15px;
+        }
+
+        .move-history::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .move-history::-webkit-scrollbar-track {
+            background: rgba(255,255,255,0.1);
+            border-radius: 3px;
+        }
+
+        .move-history::-webkit-scrollbar-thumb {
+            background: rgba(255,255,255,0.3);
+            border-radius: 3px;
+        }
+
+        .status-display {
+            text-align: center;
+            font-size: 1.2rem;
+            font-weight: bold;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            transition: all 0.3s ease;
+        }
+
+        .status-display.white-turn {
+            background: linear-gradient(45deg, #e3f2fd, #bbdefb);
+            color: #1976d2;
+        }
+
+        .status-display.black-turn {
+            background: linear-gradient(45deg, #424242, #616161);
+            color: #fff;
+        }
+
+        .status-display.check {
+            background: linear-gradient(45deg, #ffeb3b, #ffc107);
+            color: #f57f17;
+            animation: shake 0.5s ease-in-out;
+        }
+
+        .status-display.checkmate {
+            background: linear-gradient(45deg, #f44336, #d32f2f);
+            color: #fff;
+            animation: victory 1s ease-in-out;
+        }
+
+        .tutorial-section {
+            margin-top: 20px;
+        }
+
+        .tutorial-step {
+            background: rgba(0,0,0,0.2);
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 15px;
+            border-left: 4px solid #4caf50;
+            transition: all 0.3s ease;
+        }
+
+        .tutorial-step:hover {
+            background: rgba(0,0,0,0.3);
+            transform: translateX(10px);
+        }
+
+        .piece-guide {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        .piece-card {
+            background: rgba(255,255,255,0.1);
+            border-radius: 12px;
+            padding: 15px;
+            text-align: center;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .piece-card:hover {
+            background: rgba(255,255,255,0.2);
+            transform: translateY(-5px);
+        }
+
+        .piece-card .piece-icon {
+            font-size: 3rem;
+            margin-bottom: 8px;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.8);
+            backdrop-filter: blur(5px);
+        }
+
+        .modal-content {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            margin: 5% auto;
+            padding: 30px;
+            border-radius: 20px;
+            width: 80%;
+            max-width: 600px;
+            position: relative;
+            animation: modalSlideIn 0.3s ease-out;
+        }
+
+        .close {
+            color: #fff;
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .close:hover {
+            transform: scale(1.2);
+            color: #ffeb3b;
+        }
+
+        @keyframes fadeInDown {
+            from {
+                opacity: 0;
+                transform: translate3d(0, -100%, 0);
+            }
+            to {
+                opacity: 1;
+                transform: translate3d(0, 0, 0);
+            }
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translate3d(0, 100%, 0);
+            }
+            to {
+                opacity: 1;
+                transform: translate3d(0, 0, 0);
+            }
+        }
+
+        @keyframes slideInLeft {
+            from {
+                opacity: 0;
+                transform: translate3d(-100%, 0, 0);
+            }
+            to {
+                opacity: 1;
+                transform: translate3d(0, 0, 0);
+            }
+        }
+
+        @keyframes slideInRight {
+            from {
+                opacity: 0;
+                transform: translate3d(100%, 0, 0);
+            }
+            to {
+                opacity: 1;
+                transform: translate3d(0, 0, 0);
+            }
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1.08); }
+            50% { transform: scale(1.12); }
+        }
+
+        @keyframes glow {
+            from { box-shadow: 0 0 20px rgba(76, 175, 80, 0.4); }
+            to { box-shadow: 0 0 30px rgba(76, 175, 80, 0.8); }
+        }
+
+        @keyframes fadeGlow {
+            from { box-shadow: 0 0 25px rgba(255, 152, 0, 1); }
+            to { box-shadow: 0 0 10px rgba(255, 152, 0, 0.3); }
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-5px); }
+            75% { transform: translateX(5px); }
+        }
+
+        @keyframes victory {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+
+        @keyframes modalSlideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-50px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @media (max-width: 1200px) {
+            .game-container {
+                grid-template-columns: 1fr;
+                gap: 20px;
+            }
+            
+            .chessboard {
+                width: 480px;
+                height: 480px;
+            }
+            
+            .square {
+                width: 60px;
+                height: 60px;
+            }
+            
+            .piece {
+                font-size: 38px;
+            }
+        }
+
+        @media (max-width: 600px) {
+            .chessboard {
+                width: 320px;
+                height: 320px;
+            }
+            
+            .square {
+                width: 40px;
+                height: 40px;
+            }
+            
+            .piece {
+                font-size: 25px;
+            }
+            
+            h1 {
+                font-size: 2.5rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>♔ Šachy pro začátečníky ♛</h1>
+            <p class="subtitle">Naučte se hrát nejkrásnější hru na světě</p>
+        </header>
+
+        <div class="game-container">
+            <div class="left-panel">
+                <div class="info-panel">
+                    <h3>🎯 Návod ke hře</h3>
+                    <div class="tutorial-section">
+                        <div class="tutorial-step">
+                            <strong>1. Jak táhnout:</strong> Klikněte na figurku a pak na pole, kam chcete táhnout
+                        </div>
+                        <div class="tutorial-step">
+                            <strong>2. Možné tahy:</strong> Zelená pole ukazují, kam můžete táhnout
+                        </div>
+                        <div class="tutorial-step">
+                            <strong>3. Cíl hry:</strong> Dejte soupeřovu králi šach mat
+                        </div>
+                        <div class="tutorial-step">
+                            <strong>4. Speciální tahy:</strong> Rošáda, braní mimochodem a proměna pěšce
+                        </div>
+                    </div>
+                </div>
+
+                <div class="piece-guide">
+                    <div class="piece-card" onclick="showPieceInfo('king')">
+                        <div class="piece-icon">♔</div>
+                        <div>Král</div>
+                    </div>
+                    <div class="piece-card" onclick="showPieceInfo('queen')">
+                        <div class="piece-icon">♕</div>
+                        <div>Dáma</div>
+                    </div>
+                    <div class="piece-card" onclick="showPieceInfo('rook')">
+                        <div class="piece-icon">♖</div>
+                        <div>Věž</div>
+                    </div>
+                    <div class="piece-card" onclick="showPieceInfo('bishop')">
+                        <div class="piece-icon">♗</div>
+                        <div>Střelec</div>
+                    </div>
+                    <div class="piece-card" onclick="showPieceInfo('knight')">
+                        <div class="piece-icon">♘</div>
+                        <div>Jezdec</div>
+                    </div>
+                    <div class="piece-card" onclick="showPieceInfo('pawn')">
+                        <div class="piece-icon">♙</div>
+                        <div>Pěšec</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="board-container">
+                <div class="status-display white-turn" id="gameStatus">
+                    Na tahu: Bílý hráč
+                </div>
+                <div class="chessboard" id="chessboard"></div>
+                <div class="game-controls">
+                    <button class="btn btn-primary" onclick="newGame()">🆕 Nová hra</button>
+                    <button class="btn btn-secondary" onclick="undoMove()">↶ Zpět</button>
+                    <button class="btn btn-secondary" onclick="showHint()">💡 Nápověda</button>
+                    <button class="btn btn-danger" onclick="flipBoard()">🔄 Otočit</button>
+                </div>
+            </div>
+
+            <div class="right-panel">
+                <div class="info-panel">
+                    <h3>📊 Stav hry</h3>
+                    <div id="capturedPieces">
+                        <div><strong>Bílý sebral:</strong> <span id="capturedByWhite"></span></div>
+                        <div><strong>Černý sebral:</strong> <span id="capturedByBlack"></span></div>
+                    </div>
+                    <div class="move-history" id="moveHistory">
+                        <div><em>Historie tahů se zobrazí zde...</em></div>
+                    </div>
+                </div>
+                
+                <div class="info-panel" style="margin-top: 20px;">
+                    <h3>🏆 Statistiky</h3>
+                    <div id="gameStats">
+                        <div>Odehrané hry: <span id="gamesPlayed">0</span></div>
+                        <div>Výhry bílého: <span id="whiteWins">0</span></div>
+                        <div>Výhry černého: <span id="blackWins">0</span></div>
+                        <div>Remízy: <span id="draws">0</span></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal pro informace o figurkách -->
+    <div id="pieceModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal()">&times;</span>
+            <div id="modalContent"></div>
+        </div>
+    </div>
+
+    <script>
+        // Definice figurek
+        const pieces = {
+            'wK': '♔', 'wQ': '♕', 'wR': '♖', 'wB': '♗', 'wN': '♘', 'wP': '♙',
+            'bK': '♚', 'bQ': '♛', 'bR': '♜', 'bB': '♝', 'bN': '♞', 'bP': '♟'
+        };
+
+        // Počáteční pozice
+        let board = [
+            ['bR', 'bN', 'bB', 'bQ', 'bK', 'bB', 'bN', 'bR'],
+            ['bP', 'bP', 'bP', 'bP', 'bP', 'bP', 'bP', 'bP'],
+            ['', '', '', '', '', '', '', ''],
+            ['', '', '', '', '', '', '', ''],
+            ['', '', '', '', '', '', '', ''],
+            ['', '', '', '', '', '', '', ''],
+            ['wP', 'wP', 'wP', 'wP', 'wP', 'wP', 'wP', 'wP'],
+            ['wR', 'wN', 'wB', 'wQ', 'wK', 'wB', 'wN', 'wR']
+        ];
+
+        let currentPlayer = 'w';
+        let selectedSquare = null;
+        let moveHistory = [];
+        let capturedByWhite = [];
+        let capturedByBlack = [];
+        let gameStats = JSON.parse(localStorage.getItem('chessStats')) || {
+            gamesPlayed: 0, whiteWins: 0, blackWins: 0, draws: 0
+        };
+        let isFlipped = false;
+
+        // Vytvoření šachovnice
+        function createBoard() {
+            const boardElement = document.getElementById('chessboard');
+            boardElement.innerHTML = '';
+            
+            for (let row = 0; row < 8; row++) {
+                for (let col = 0; col < 8; col++) {
+                    const square = document.createElement('div');
+                    const displayRow = isFlipped ? 7 - row : row;
+                    const displayCol = isFlipped ? 7 - col : col;
+                    
+                    square.className = `square ${(displayRow + displayCol) % 2 === 0 ? 'light' : 'dark'}`;
+                    square.dataset.row = row;
+                    square.dataset.col = col;
+                    square.onclick = () => handleSquareClick(row, col);
+                    
+                    // Přidání souřadnic
+                    if (displayCol === 0) {
+                        const rankCoord = document.createElement('div');
+                        rankCoord.className = 'coordinates coord-rank';
+                        rankCoord.textContent = 8 - displayRow;
+                        square.appendChild(rankCoord);
+                    }
+                    if (displayRow === 7) {
+                        const fileCoord = document.createElement('div');
+                        fileCoord.className = 'coordinates coord-file';
+                        fileCoord.textContent = String.fromCharCode(97 + displayCol);
+                        square.appendChild(fileCoord);
+                    }
+                    
+                    if (board[row][col]) {
+                        const piece = document.createElement('div');
+                        piece.className = 'piece';
+                        piece.textContent = pieces[board[row][col]];
+                        piece.draggable = true;
+                        piece.ondragstart = (e) => handleDragStart(e, row, col);
+                        square.appendChild(piece);
+                    }
+                    
+                    boardElement.appendChild(square);
+                }
+            }
+        }
+
+        // Kliknutí na pole
+        function handleSquareClick(row, col) {
+            if (selectedSquare) {
+                if (selectedSquare.row === row && selectedSquare.col === col) {
+                    clearSelection();
+                    return;
+                }
+                
+                if (isValidMove(selectedSquare.row, selectedSquare.col, row, col)) {
+                    makeMove(selectedSquare.row, selectedSquare.col, row, col);
+                    clearSelection();
+                } else {
+                    clearSelection();
+                    if (board[row][col] && board[row][col][0] === currentPlayer) {
+                        selectSquare(row, col);
+                    }
+                }
+            } else {
+                if (board[row][col] && board[row][col][0] === currentPlayer) {
+                    selectSquare(row, col);
+                }
+            }
+        }
+
+        // Výběr pole
+        function selectSquare(row, col) {
+            selectedSquare = { row, col };
+            updateBoardDisplay();
+            showPossibleMoves(row, col);
+        }
+
+        // Zrušení výběru
+        function clearSelection() {
+            selectedSquare = null;
+            updateBoardDisplay();
+        }
+
+        // Aktualizace zobrazení desky
+        function updateBoardDisplay() {
+            const squares = document.querySelectorAll('.square');
+            squares.forEach(square => {
+                square.classList.remove('selected', 'possible-move', 'last-move');
+                
+                if (selectedSquare && 
+                    square.dataset.row == selectedSquare.row && 
+                    square.dataset.col == selectedSquare.col) {
+                    square.classList.add('selected');
+                }
+            });
+        }
+
+        // Zobrazení možných tahů
+        function showPossibleMoves(row, col) {
+            const squares = document.querySelectorAll('.square');
+            squares.forEach(square => {
+                const toRow = parseInt(square.dataset.row);
+                const toCol = parseInt(square.dataset.col);
+                
+                if (isValidMove(row, col, toRow, toCol)) {
+                    square.classList.add('possible-move');
+                }
+            });
+        }
+
+        // Kontrola platnosti tahu
+        function isValidMove(fromRow, fromCol, toRow, toCol) {
+            const piece = board[fromRow][fromCol];
+            if (!piece || piece[0] !== currentPlayer) return false;
+            
+            const targetPiece = board[toRow][toCol];
+            if (targetPiece && targetPiece[0] === currentPlayer) return false;
+            
+            const pieceType = piece[1];
+            const dx = toCol - fromCol;
+            const dy = toRow - fromRow;
+            
+            switch (pieceType) {
+                case 'P': return isValidPawnMove(fromRow, fromCol, toRow, toCol, piece[0]);
+                case 'R': return isValidRookMove(fromRow, fromCol, toRow, toCol);
+                case 'N': return isValidKnightMove(dx, dy);
+                case 'B': return isValidBishopMove(fromRow, fromCol, toRow, toCol);
+                case 'Q': return isValidQueenMove(fromRow, fromCol, toRow, toCol);
+                case 'K': return isValidKingMove(dx, dy);
+            }
+            return false;
+        }
+
+        // Validace tahů jednotlivých figurek
+        function isValidPawnMove(fromRow, fromCol, toRow, toCol, color) {
+            const direction = color === 'w' ? -1 : 1;
+            const startRow = color === 'w' ? 6 : 1;
+            const dx = toCol - fromCol;
+            const dy = toRow - fromRow;
+            
+            if (dx === 0) {
+                if (dy === direction && !board[toRow][toCol]) return true;
+                if (fromRow === startRow && dy === 2 * direction && !board[toRow][toCol]) return true;
+            } else if (Math.abs(dx) === 1 && dy === direction) {
+                return !!board[toRow][toCol];
+            }
+            return false;
+        }
+
+        function isValidRookMove(fromRow, fromCol, toRow, toCol) {
+            if (fromRow !== toRow && fromCol !== toCol) return false;
+            return isPathClear(fromRow, fromCol, toRow, toCol);
+        }
+
+        function isValidKnightMove(dx, dy) {
+            return (Math.abs(dx) === 2 && Math.abs(dy) === 1) || 
+                   (Math.abs(dx) === 1 && Math.abs(dy) === 2);
+        }
+
+        function isValidBishopMove(fromRow, fromCol, toRow, toCol) {
+            if (Math.abs(toRow - fromRow) !== Math.abs(toCol - fromCol)) return false;
+            return isPathClear(fromRow, fromCol, toRow, toCol);
+        }
+
+        function isValidQueenMove(fromRow, fromCol, toRow, toCol) {
+            return isValidRookMove(fromRow, fromCol, toRow, toCol) || 
+                   isValidBishopMove(fromRow, fromCol, toRow, toCol);
+        }
+
+        function isValidKingMove(dx, dy) {
+            return Math.abs(dx) <= 1 && Math.abs(dy) <= 1;
+        }
+
+        // Kontrola volné cesty
+        function isPathClear(fromRow, fromCol, toRow, toCol) {
+            const dx = Math.sign(toCol - fromCol);
+            const dy = Math.sign(toRow - fromRow);
+            let x = fromCol + dx;
+            let y = fromRow + dy;
+            
+            while (x !== toCol || y !== toRow) {
+                if (board[y][x]) return false;
+                x += dx;
+                y += dy;
+            }
+            return true;
+        }
+
+        // Provedení tahu
+        function makeMove(fromRow, fromCol, toRow, toCol) {
+            const piece = board[fromRow][fromCol];
+            const capturedPiece = board[toRow][toCol];
+            
+            // Zaznamenání tahu
+            const moveNotation = `${String.fromCharCode(97 + fromCol)}${8 - fromRow}-${String.fromCharCode(97 + toCol)}${8 - toRow}`;
+            moveHistory.push({
+                from: { row: fromRow, col: fromCol },
+                to: { row: toRow, col: toCol },
+                piece: piece,
+                captured: capturedPiece,
+                notation: moveNotation
+            });
+            
+            // Sebrat figurku
+            if (capturedPiece) {
+                if (currentPlayer === 'w') {
+                    capturedByWhite.push(capturedPiece);
+                } else {
+                    capturedByBlack.push(capturedPiece);
+                }
+            }
+            
+            // Přesunout figurku
+            board[toRow][toCol] = piece;
+            board[fromRow][fromCol] = '';
+            
+            // Proměna pěšce
+            if ((piece === 'wP' && toRow === 0) || (piece === 'bP' && toRow === 7)) {
+                board[toRow][toCol] = piece[0] + 'Q'; // Automatická proměna na dámu
+            }
+            
+            // Přepnutí hráče
+            currentPlayer = currentPlayer === 'w' ? 'b' : 'w';
+            
+            // Aktualizace zobrazení
+            createBoard();
+            updateGameStatus();
+            updateMoveHistory();
+            updateCapturedPieces();
+            
+            // Zvýraznění posledního tahu
+            highlightLastMove(fromRow, fromCol, toRow, toCol);
+            
+            // Kontrola konce hry
+            checkGameEnd();
+        }
+
+        // Zvýraznění posledního tahu
+        function highlightLastMove(fromRow, fromCol, toRow, toCol) {
+            setTimeout(() => {
+                const squares = document.querySelectorAll('.square');
+                squares.forEach(square => {
+                    const row = parseInt(square.dataset.row);
+                    const col = parseInt(square.dataset.col);
+                    if ((row === fromRow && col === fromCol) || (row === toRow && col === toCol)) {
+                        square.classList.add('last-move');
+                    }
+                });
+            }, 100);
+        }
+
+        // Aktualizace stavu hry
+        function updateGameStatus() {
+            const statusElement = document.getElementById('gameStatus');
+            const isInCheck = isKingInCheck(currentPlayer);
+            
+            statusElement.className = 'status-display';
+            
+            if (isInCheck) {
+                if (isCheckmate(currentPlayer)) {
+                    statusElement.textContent = `Šach mat! Vyhrál ${currentPlayer === 'w' ? 'černý' : 'bílý'} hráč`;
+                    statusElement.classList.add('checkmate');
+                    gameStats.gamesPlayed++;
+                    if (currentPlayer === 'w') {
+                        gameStats.blackWins++;
+                    } else {
+                        gameStats.whiteWins++;
+                    }
+                    saveStats();
+                    updateStatsDisplay();
+                } else {
+                    statusElement.textContent = `Šach! Na tahu: ${currentPlayer === 'w' ? 'Bílý' : 'Černý'} hráč`;
+                    statusElement.classList.add('check');
+                }
+            } else if (isStalemate(currentPlayer)) {
+                statusElement.textContent = 'Remíza - Pat!';
+                statusElement.classList.add('checkmate');
+                gameStats.gamesPlayed++;
+                gameStats.draws++;
+                saveStats();
+                updateStatsDisplay();
+            } else {
+                statusElement.textContent = `Na tahu: ${currentPlayer === 'w' ? 'Bílý' : 'Černý'} hráč`;
+                statusElement.classList.add(currentPlayer === 'w' ? 'white-turn' : 'black-turn');
+            }
+        }
+
+        // Kontrola šachu
+        function isKingInCheck(color) {
+            const kingPos = findKing(color);
+            if (!kingPos) return false;
+            
+            for (let row = 0; row < 8; row++) {
+                for (let col = 0; col < 8; col++) {
+                    const piece = board[row][col];
+                    if (piece && piece[0] !== color) {
+                        if (isValidMove(row, col, kingPos.row, kingPos.col)) {
+                            return true;
+                        }
+                    }
+                }
+            }
+            return false;
+        }
+
+        // Najít krále
+        function findKing(color) {
+            for (let row = 0; row < 8; row++) {
+                for (let col = 0; col < 8; col++) {
+                    if (board[row][col] === color + 'K') {
+                        return { row, col };
+                    }
+                }
+            }
+            return null;
+        }
+
+        // Kontrola šach matu
+        function isCheckmate(color) {
+            if (!isKingInCheck(color)) return false;
+            
+            for (let fromRow = 0; fromRow < 8; fromRow++) {
+                for (let fromCol = 0; fromCol < 8; fromCol++) {
+                    const piece = board[fromRow][fromCol];
+                    if (piece && piece[0] === color) {
+                        for (let toRow = 0; toRow < 8; toRow++) {
+                            for (let toCol = 0; toCol < 8; toCol++) {
+                                if (isValidMove(fromRow, fromCol, toRow, toCol)) {
+                                    // Simulovat tah
+                                    const originalPiece = board[toRow][toCol];
+                                    board[toRow][toCol] = piece;
+                                    board[fromRow][fromCol] = '';
+                                    
+                                    const stillInCheck = isKingInCheck(color);
+                                    
+                                    // Vrátit zpět
+                                    board[fromRow][fromCol] = piece;
+                                    board[toRow][toCol] = originalPiece;
+                                    
+                                    if (!stillInCheck) return false;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            return true;
+        }
+
+        // Kontrola patu
+        function isStalemate(color) {
+            if (isKingInCheck(color)) return false;
+            
+            for (let fromRow = 0; fromRow < 8; fromRow++) {
+                for (let fromCol = 0; fromCol < 8; fromCol++) {
+                    const piece = board[fromRow][fromCol];
+                    if (piece && piece[0] === color) {
+                        for (let toRow = 0; toRow < 8; toRow++) {
+                            for (let toCol = 0; toCol < 8; toCol++) {
+                                if (isValidMove(fromRow, fromCol, toRow, toCol)) {
+                                    return false;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            return true;
+        }
+
+        // Aktualizace historie tahů
+        function updateMoveHistory() {
+            const historyElement = document.getElementById('moveHistory');
+            if (moveHistory.length === 0) {
+                historyElement.innerHTML = '<div><em>Historie tahů se zobrazí zde...</em></div>';
+                return;
+            }
+            
+            let html = '';
+            for (let i = 0; i < moveHistory.length; i += 2) {
+                const moveNumber = Math.floor(i / 2) + 1;
+                const whiteMove = moveHistory[i];
+                const blackMove = moveHistory[i + 1];
+                
+                html += `<div><strong>${moveNumber}.</strong> ${whiteMove.notation}`;
+                if (blackMove) {
+                    html += ` ${blackMove.notation}`;
+                }
+                html += '</div>';
+            }
+            historyElement.innerHTML = html;
+            historyElement.scrollTop = historyElement.scrollHeight;
+        }
+
+        // Aktualizace sebraných figurek
+        function updateCapturedPieces() {
+            document.getElementById('capturedByWhite').innerHTML = 
+                capturedByWhite.map(piece => pieces[piece]).join(' ');
+            document.getElementById('capturedByBlack').innerHTML = 
+                capturedByBlack.map(piece => pieces[piece]).join(' ');
+        }
+
+        // Aktualizace statistik
+        function updateStatsDisplay() {
+            document.getElementById('gamesPlayed').textContent = gameStats.gamesPlayed;
+            document.getElementById('whiteWins').textContent = gameStats.whiteWins;
+            document.getElementById('blackWins').textContent = gameStats.blackWins;
+            document.getElementById('draws').textContent = gameStats.draws;
+        }
+
+        // Uložení statistik
+        function saveStats() {
+            localStorage.setItem('chessStats', JSON.stringify(gameStats));
+        }
+
+        // Nová hra
+        function newGame() {
+            board = [
+                ['bR', 'bN', 'bB', 'bQ', 'bK', 'bB', 'bN', 'bR'],
+                ['bP', 'bP', 'bP', 'bP', 'bP', 'bP', 'bP', 'bP'],
+                ['', '', '', '', '', '', '', ''],
+                ['', '', '', '', '', '', '', ''],
+                ['', '', '', '', '', '', '', ''],
+                ['', '', '', '', '', '', '', ''],
+                ['wP', 'wP', 'wP', 'wP', 'wP', 'wP', 'wP', 'wP'],
+                ['wR', 'wN', 'wB', 'wQ', 'wK', 'wB', 'wN', 'wR']
+            ];
+            
+            currentPlayer = 'w';
+            selectedSquare = null;
+            moveHistory = [];
+            capturedByWhite = [];
+            capturedByBlack = [];
+            
+            createBoard();
+            updateGameStatus();
+            updateMoveHistory();
+            updateCapturedPieces();
+        }
+
+        // Zpět tah
+        function undoMove() {
+            if (moveHistory.length === 0) return;
+            
+            const lastMove = moveHistory.pop();
+            board[lastMove.from.row][lastMove.from.col] = lastMove.piece;
+            board[lastMove.to.row][lastMove.to.col] = lastMove.captured || '';
+            
+            // Vrátit sebranou figurku
+            if (lastMove.captured) {
+                if (currentPlayer === 'b') {
+                    capturedByWhite.pop();
+                } else {
+                    capturedByBlack.pop();
+                }
+            }
+            
+            currentPlayer = currentPlayer === 'w' ? 'b' : 'w';
+            selectedSquare = null;
+            
+            createBoard();
+            updateGameStatus();
+            updateMoveHistory();
+            updateCapturedPieces();
+        }
+
+        // Nápověda
+        function showHint() {
+            const hints = [
+                "💡 Zkuste kontrolovat centrum desky!",
+                "💡 Rozvíjejte své figurky brzy ve hře!",
+                "💡 Chraňte svého krále rošádou!",
+                "💡 Pěšci jsou duše šachu - používejte je moudře!",
+                "💡 Věže jsou silné na otevřených sloupcích!",
+                "💡 Jezdci jsou skvělí v uzavřených pozicích!",
+                "💡 Dáma je nejmocnější, ale netlačte s ní moc brzy!",
+                "💡 Myslete na bezpečnost krále!"
+            ];
+            
+            const randomHint = hints[Math.floor(Math.random() * hints.length)];
+            alert(randomHint);
+        }
+
+        // Otočení desky
+        function flipBoard() {
+            isFlipped = !isFlipped;
+            createBoard();
+        }
+
+        // Drag and drop
+        function handleDragStart(e, row, col) {
+            if (board[row][col][0] !== currentPlayer) {
+                e.preventDefault();
+                return;
+            }
+            
+            selectedSquare = { row, col };
+            e.dataTransfer.setData('text/plain', `${row},${col}`);
+            setTimeout(() => {
+                e.target.classList.add('dragging');
+                showPossibleMoves(row, col);
+            }, 0);
+        }
+
+        // Kontrola konce hry
+        function checkGameEnd() {
+            if (isCheckmate(currentPlayer)) {
+                setTimeout(() => {
+                    alert(`🎉 Hra skončila! Vyhrál ${currentPlayer === 'w' ? 'černý' : 'bílý'} hráč!`);
+                }, 500);
+            } else if (isStalemate(currentPlayer)) {
+                setTimeout(() => {
+                    alert('🤝 Hra skončila remízou - pat!');
+                }, 500);
+            }
+        }
+
+        // Informace o figurkách
+        function showPieceInfo(pieceType) {
+            const pieceInfo = {
+                king: {
+                    name: 'Král ♔',
+                    description: 'Nejdůležitější figurka. Může se pohybovat o jedno pole libovolným směrem. Cílem hry je dát soupeřovu králi šach mat.',
+                    moves: 'Jeden krok libovolným směrem (vodorovně, svisle, úhlopříčně)'
+                },
+                queen: {
+                    name: 'Dáma ♕',
+                    description: 'Nejmocnější figurka na desce. Kombinuje pohyby věže a střelce.',
+                    moves: 'Libovolný počet polí vodorovně, svisle nebo úhlopříčně'
+                },
+                rook: {
+                    name: 'Věž ♖',
+                    description: 'Silná figurka pro ovládání sloupců a řad. Používá se také při rošádě.',
+                    moves: 'Libovolný počet polí vodorovně nebo svisle'
+                },
+                bishop: {
+                    name: 'Střelec ♗',
+                    description: 'Pohybuje se pouze po úhlopříčkách. Každý hráč má jednoho na bílých a jednoho na černých polích.',
+                    moves: 'Libovolný počet polí úhlopříčně'
+                },
+                knight: {
+                    name: 'Jezdec ♘',
+                    description: 'Jediná figurka, která může přeskakovat přes jiné. Pohybuje se ve tvaru písmene L.',
+                    moves: 'Ve tvaru L - dva kroky jedním směrem a jeden kolmo, nebo naopak'
+                },
+                pawn: {
+                    name: 'Pěšec ♙',
+                    description: 'Nejpočetnější figurka. Může se proměnit v jinou figurku při dosažení protějšího kraje desky.',
+                    moves: 'Jeden krok dopředu, při prvním tahu dva kroky. Bere úhlopříčně dopředu.'
+                }
+            };
+            
+            const info = pieceInfo[pieceType];
+            document.getElementById('modalContent').innerHTML = `
+                <h2>${info.name}</h2>
+                <p><strong>Popis:</strong> ${info.description}</p>
+                <p><strong>Pohyb:</strong> ${info.moves}</p>
+            `;
+            document.getElementById('pieceModal').style.display = 'block';
+        }
+
+        // Zavření modalu
+        function closeModal() {
+            document.getElementById('pieceModal').style.display = 'none';
+        }
+
+        // Zavření modalu při kliknutí mimo
+        window.onclick = function(event) {
+            const modal = document.getElementById('pieceModal');
+            if (event.target === modal) {
+                modal.style.display = 'none';
+            }
+        }
+
+        // Inicializace hry
+        document.addEventListener('DOMContentLoaded', function() {
+            createBoard();
+            updateGameStatus();
+            updateStatsDisplay();
+            updateCapturedPieces();
+            
+            // Přidání drag and drop support pro celou desku
+            const boardElement = document.getElementById('chessboard');
+            
+            boardElement.addEventListener('dragover', function(e) {
+                e.preventDefault();
+            });
+            
+            boardElement.addEventListener('drop', function(e) {
+                e.preventDefault();
+                const data = e.dataTransfer.getData('text/plain');
+                const [fromRow, fromCol] = data.split(',').map(Number);
+                
+                // Najít cílové pole
+                let target = e.target;
+                while (target && !target.classList.contains('square')) {
+                    target = target.parentElement;
+                }
+                
+                if (target && target.classList.contains('square')) {
+                    const toRow = parseInt(target.dataset.row);
+                    const toCol = parseInt(target.dataset.col);
+                    
+                    if (isValidMove(fromRow, fromCol, toRow, toCol)) {
+                        makeMove(fromRow, fromCol, toRow, toCol);
+                    }
+                }
+                
+                // Ukončit drag
+                document.querySelectorAll('.piece').forEach(p => p.classList.remove('dragging'));
+                clearSelection();
+            });
+        });
+    </script>
+</body>
+</html>
